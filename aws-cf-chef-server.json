@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Sample template to bring up an Opscode Chef Server using the BootStrap Chef RubyGems installation. This configuration creates and starts the Chef Server with the WebUI enabled, initializes knife and uploads specified cookbooks and roles to the chef server. A WaitCondition is used to hold up the stack creation until the application is deployed. **WARNING** This template creates one or more Amazon EC2 instances. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Description": "Sample template to bring up an Opscode Chef Server using the Chef Server cookbook. This configuration creates and starts the Chef Server with the WebUI enabled. A WaitCondition is used to hold up the stack creation until the application is deployed. **WARNING** This template creates one or more Amazon EC2 instances. You will be billed for the AWS resources used if you create a stack from this template.",
     "Mappings": {
         "AWSInstanceType2Arch": {
             "c1.medium": {
@@ -63,7 +63,7 @@
             },
             "us-east-1": {
                 "32": "ami-06ad526f",
-                "64": "ami-1aad5273"
+                "64": "ami-2d467844"
             },
             "us-west-1": {
                 "32": "ami-116f3c54",
@@ -129,6 +129,10 @@
             "Description": "Chef Server Cookbook Version",
             "Type": "String"
         },
+        "ChefServerFQDN": {
+            "Description": "FQDN of Chef Server",
+            "Type": "String"
+        },
         "InstanceType": {
             "AllowedValues": [
                 "t1.micro",
@@ -148,7 +152,7 @@
                 "cg1.4xlarge"
             ],
             "ConstraintDescription": "must be a valid EC2 instance type.",
-            "Default": "t1.micro",
+            "Default": "m1.small",
             "Description": "WebServer EC2 instance type",
             "Type": "String"
         },
@@ -219,6 +223,7 @@
             "Type": "AWS::EC2::SecurityGroup"
         },
         "ChefServer": {
+            "DependsOn" : "BucketPolicy",
             "Metadata": {
                 "AWS::CloudFormation::Init": {
                     "config" : {
@@ -255,6 +260,7 @@
                             "/etc/chef/chef.json" : {
                                 "content": {
                                     "chef-server": {
+                                        "api_fqdn": { "Ref": "ChefServerFQDN" },
                                         "configuration": {
                                             "chef_server_webui": {
                                                 "enable": true
@@ -262,7 +268,7 @@
                                         }
                                     },
                                     "run_list": [
-                                        "recipe[chef-server::rubygems-install]"
+                                        "recipe[chef-server::default]"
                                     ]
                                 },
                                 "mode"  : "000644",
@@ -274,20 +280,10 @@
                 }
             },
             "Properties": {
-                "ImageId": {
-                    "Fn::FindInMap": [
-                        "AWSRegionArch2AMI", 
-                        { "Ref": "AWS::Region" },
-                        { "Fn::FindInMap": [ "AWSInstanceType2Arch", { "Ref": "InstanceType" }, "Arch" ] }
-                    ]
-                },
+                "ImageId": { "Fn::FindInMap": [ "AWSRegionArch2AMI", { "Ref": "AWS::Region" }, { "Fn::FindInMap": [ "AWSInstanceType2Arch", { "Ref": "InstanceType" }, "Arch" ] } ]},
                 "InstanceType": { "Ref": "InstanceType" },
                 "KeyName": { "Ref": "KeyName" },
-                "SecurityGroups": [
-                    {
-                        "Ref": "ChefServerSecurityGroup"
-                    }
-                ],
+                "SecurityGroups": [ { "Ref": "ChefServerSecurityGroup" } ],
                 "UserData": {
                     "Fn::Base64": {
                         "Fn::Join": [
@@ -310,17 +306,17 @@
 
                                 "# Bootstrap chef\n",
 
-                                "# install chef-solo",
-                                "curl -L https://www.opscode.com/chef/install.sh | bash\n",
+                                "# install chef-solo\n",
+                                "curl -L https://www.opscode.com/chef/install.sh | bash > /tmp/chef_install.log 2>&1 || error_exit 'Failed to bootstrap chef-solo'\n",
 
                                 "# create required bootstrap dirs/files\n",
-                                "mkdir -p /var/chef/cache /var/chef/cookbooks/chef-server\n",
+                                "mkdir -p /var/chef/cache /var/chef/cookbooks/chef-server > /tmp/make_directories.log 2>&1 || error_exit 'Failed to create necessary directories'\n",
 
                                 "# pull down this chef-server cookbook\n",
-                                "wget -qO- https://github.com/opscode-cookbooks/chef-server/archive/", { "Ref": "ChefServerCookbookVersion"}, ".tar.gz | tar xvzC /var/chef/cookbooks/chef-server --strip-components=1\n",
+                                "wget -qO- https://github.com/opscode-cookbooks/chef-server/archive/", { "Ref": "ChefServerCookbookVersion"}, ".tar.gz | tar xvzC /var/chef/cookbooks/chef-server --strip-components=1 > /tmp/download_chef_server_cookbook.log 2>&1  || error_exit 'Failed to download and extract chef-server cookbook'\n",
 
-                                "# run chef-solo",
-                                "chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json > /tmp/chef_solo.log 2>&1 || error_exit 'Failed to bootstrap chef server'\n",
+                                "# run chef-solo\n",
+                                "sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json > /tmp/chef_solo.log 2>&1 || error_exit 'Failed to bootstrap chef server'\n",
 
                                 "# copy validation key to S3 bucket\n",
                                 "s3cmd -c /home/ubuntu/.s3cfg put /etc/chef-server/chef-validator.pem s3://", { "Ref": "PrivateKeyBucket" }, "/chef-validator.pem > /tmp/put_validation_key.log 2>&1 || error_exit 'Failed to put Chef Server validation key'\n",
