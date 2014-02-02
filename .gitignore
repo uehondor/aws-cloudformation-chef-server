@@ -1,3 +1,4 @@
 *.sublime-*
 .chef/*.pem
+.chef/live
 .vagrant
