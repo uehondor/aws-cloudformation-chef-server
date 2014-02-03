@@ -27,6 +27,7 @@ Access Keys: The .pem keys needed by [`knife`](http://docs.opscode.com/knife.htm
 
 ### Test on Vagrant
 If you want to have a play without racking up a few cents/pennies, you can setup chef server on a [`Vagrant`](http://www.vagrantup.com) VM.
-All you have to do is `vagrant up --provision`.
 
-Note: You need to have [`vagrant-librarian-chef`](https://github.com/jimmycuadra/vagrant-librarian-chef) (not tested) or [`vagrant-berkshelf`](https://github.com/berkshelf/vagrant-berkshelf) plugins installed.
+All you need to do is `vagrant up --provision`.
+
+Note: You need to have [`vagrant-librarian-chef`](https://github.com/jimmycuadra/vagrant-librarian-chef) plugin installed.
