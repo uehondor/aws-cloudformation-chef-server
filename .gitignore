@@ -2,3 +2,4 @@
 .chef/*.pem
 .chef/live
 .vagrant
+chef/cookbooks

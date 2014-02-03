@@ -3,4 +3,4 @@
 
 site "http://community.opscode.com/api/v1"
 
-cookbook "chef-server", "v2.0.1"
+cookbook "chef-server", "2.0.1"
