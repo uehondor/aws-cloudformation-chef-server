@@ -297,7 +297,7 @@
                                 "  exit 1\n",
                                 "}\n",
 
-                                "apt-get -y install python-setuptools\n",
+                                "wget https://bootstrap.pypa.io/ez_setup.py -O - | python\n",
                                 "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
                                 "cfn-init --region ", { "Ref": "AWS::Region" },
                                 "    -s ", { "Ref": "AWS::StackId" }, " -r ChefServer ",
@@ -323,7 +323,7 @@
 
                                 "# copy client key to S3 bucket\n",
                                 "s3cmd -c /home/ubuntu/.s3cfg put /etc/chef-server/admin.pem s3://", { "Ref": "PrivateKeyBucket" }, "/admin.pem > /tmp/put_client_key.log 2>&1 || error_exit 'Failed to put client admin.pem key'\n",
-                                
+
                                 "# If all went well, signal success\n",
                                 "cfn-signal -e $? -r 'Chef Server configuration' '", { "Ref": "ChefServerWaitHandle"}, "'\n"
                             ]
